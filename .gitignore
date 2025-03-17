@@ -26,7 +26,6 @@ venv
 # C extensions
 *.so
 
-iqoptionapi*
 
 
 # Distribution / packaging
