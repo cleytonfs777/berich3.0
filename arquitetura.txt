@@ -1,0 +1,5 @@
+Robô com estratégia de Cruzamento de Médias Móveis + RSI
+Robô com estratégia baseada no Smart Money Concept (SMC)
+Robô com estratégia de Fibonacci Retracement + Confirmação de Tendência
+
+Eu tenho um arquivo chamado backtest a parte. Ele tem funções que são chamadas diretamente do meu bot no Telegram, para que eu analise se determinada estrategia é boa para o par.....Gostei mais da sua forma de back teste e automação de parametros. O que devo mudar no meu codigo de backtest para usar a estratégia. Lembrando que quero
