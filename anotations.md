@@ -7,3 +7,8 @@ message.chat.id
 #TODO:
 - Analisar as estratégias que não podem ter timeframes alterados
 modedas_major = ['EURUSD-OTC', 'EURGBP-OTC', 'USDCHF-OTC', 'GBPUSD-OTC', 'GBPJPY-OTC','AUDUSD-OTC', 'USDCAD-OTC', 'AUDJPY-OTC', 'GBPCAD-OTC', 'GBPCHF-OTC', 'GBPAUD-OTC', 'EURCAD-OTC', 'CHFJPY-OTC', 'CADCHF-OTC', 'EURAUD-OTC', 'EURNZD-OTC', 'AUDCHF-OTC', 'AUDNZD-OTC', 'EURCHF-OTC', 'GBPNZD-OTC', 'CADJPY-OTC', 'NZDCAD-OTC', 'NZDJPY-OTC', 'USDJPY-OTC', 'AUDCAD-OTC']
+
+
+# Instalação da IQOPTION API
+
+pip install -U https://github.com/iqoptionapi/iqoptionapi/archive/refs/heads/master.zip

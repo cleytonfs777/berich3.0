@@ -7,7 +7,6 @@ cycler==0.12.1
 dill==0.3.9
 fonttools==4.56.0
 idna==3.10
-iqoptionapi @ file:///media/cleytonfs/21db2a91-5ee2-437c-a5c2-f86c05d9cc073/home/cleyton/Documentos/PROJETOS2025/BERICH_BOT/berich2.0/iqoptionapi
 isort==6.0.1
 kiwisolver==1.4.8
 matplotlib==3.10.1

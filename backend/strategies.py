@@ -209,7 +209,6 @@ def obter_padroes(api_conn, par, timeframe, num_candles=500):
     
     return df
 
-
 def analisar_padroes(df, tamanho_padrao=3):
     print("Df recebido para analisar padroes: ", df)
     """ Analisa a repetição de padrões e calcula probabilidades """
@@ -228,7 +227,6 @@ def analisar_padroes(df, tamanho_padrao=3):
         probabilidades[padrao] = {'call': round(prob_call * 100, 2), 'put': round(prob_put * 100, 2)}
     
     return probabilidades
-
 
 def detectar_order_blocks(df):
     """ Identifica Order Blocks com base em grandes movimentações """
@@ -336,7 +334,6 @@ def estrategia_fibonacci(api_conn, par, timeframe):
     
     return None
 
-
 def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, confiabilidade=70, candles_padrao=3):
     """
     Estratégia baseada em padrões recorrentes de cores de candles com análise probabilística
@@ -415,8 +412,6 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
         return 'put'
     
     return None
-
-
 
 def estrategia_teste(api_conn, par, timeframe):
     return "call"
