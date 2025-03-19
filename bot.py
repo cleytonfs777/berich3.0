@@ -147,6 +147,7 @@ app = MyClient()
 
 @app.on_message(filters.command('start'))
 async def inicio(Client, message):
+    print("Clicou em start")
     registra_sess_data(app, message.from_user.id,
                        "", "active_edit")
 
@@ -560,16 +561,13 @@ async def callback(clinet, callback_query: CallbackQuery):
         coins = get_one_data("pares_favoritos")
         strateg = usuario_dados['trat_back']
         timeframe_back = usuario_dados['timeframe_back']
-        metodo_back = "personal" if usuario_dados['personsdatas'] else "current"
-        tempo_back = usuario_dados['personsdatas'] if usuario_dados['personsdatas'] else usuario_dados['time_back']
+        metodo_back = "personal" if usuario_dados.get('personsdatas') else "current"
+        tempo_back = usuario_dados['personsdatas'] if usuario_dados.get('personsdatas') else usuario_dados['time_back']
         await callback_query.message.reply_text("Processando informações. Aguarde...")
-        print(f"""
-        coins: {coins}
-        strateg: {strateg}
-        timeframe: {timeframe_back}
-        metodo: {metodo_back}
-        tempo: {tempo_back}
-        """)
+        result = backtest_for_telegram(coins, strateg, timeframe_back, metodo_back, tempo_back)
+        await app.send_message(callback_query.message.chat.id, result)
+        registra_sess_data(app, callback_query.message.from_user.id,
+                           "", "active_edit")
 
     elif "_persontime_back" in callback_query.data:
         persontime = callback_query.data.replace("_persontime_back", "")
@@ -577,7 +575,7 @@ async def callback(clinet, callback_query: CallbackQuery):
         if persontime == "personal":
             registra_sess_data(app, callback_query.from_user.id,
                                "personsdatas", "active_edit")
-            await callback_query.message.reply(f"Digite a data/hora inicial e final no formato dd/mm/aaaa;hh:mm, sendo a separação entre elas o - (hífen)")
+            await callback_query.message.reply(f"Digite a data/hora inicial e final no formato dd/mm/aaaa hh:mm, sendo a separação entre elas o - (hífen)")
 
         else:
 
@@ -951,19 +949,11 @@ async def messages(Client, message):
         coins = get_one_data("pares_favoritos")
         strateg = usuario_dados['trat_back']
         timeframe_back = usuario_dados['timeframe_back']
-        metodo_back = "personal" if usuario_dados['personsdatas'] else "current"
-        tempo_back = usuario_dados['personsdatas'] if usuario_dados['personsdatas'] else usuario_dados['time_back']
+        metodo_back = "personal" if usuario_dados.get('personsdatas') else "current"
+        tempo_back = usuario_dados['personsdatas'] if usuario_dados.get('personsdatas') else usuario_dados['time_back']
         await app.send_message(message.chat.id, "Processando informações. Aguarde...")
-        print(f"""
-        coins: {coins}
-        strateg: {strateg}
-        timeframe: {timeframe_back}
-        metodo: {metodo_back}
-        tempo: {tempo_back}
-        """)
-        # result = backtest_for_telegram(
-        #     coin, timeframe_back, strateg, lmt, obj_comp['banca'], personsdatas)
-        # await app.send_message(message.chat.id, result)
+        result = backtest_for_telegram(coins, strateg, timeframe_back, metodo_back, tempo_back)
+        await app.send_message(message.chat.id, result)
         registra_sess_data(app, message.from_user.id,
                            "", "active_edit")
 

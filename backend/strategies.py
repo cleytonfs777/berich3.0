@@ -334,9 +334,9 @@ def estrategia_fibonacci(api_conn, par, timeframe):
     
     return None
 
-def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, confiabilidade=70, candles_padrao=3):
+def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, confiabilidade=60, candles_padrao=3, tempo_inicial=None): 
     """
-    Estratégia baseada em padrões recorrentes de cores de candles com análise probabilística
+    Estratégia baseada em padrões recorrentes de cores de candles com análise probabilística.
     """
     print(f"Analisando {par} no timeframe {timeframe} com Probabilística de Cores...")
 
@@ -344,67 +344,71 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
     periodo_analise = 500  # Quantidade de candles históricos para análise
     tamanho_minimo_corpo = 0.00015  # Tamanho mínimo do corpo do candle (ajuste conforme o ativo)
 
+    # Verifica se há tempo inicial
+    tempo_inicial = tempo_inicial if tempo_inicial else time()
+
     # Coleta dados históricos
-    timeframe = normalize_timeframe(timeframe)
     if not df:
-        velas = api_conn.get_candles(par, timeframe * 60, periodo_analise, time())
+        velas = api_conn.get_candles(par, timeframe * 60, periodo_analise, tempo_inicial)
         df = pd.DataFrame(velas)
         df.rename(columns={"max": "high", "min": "low", "open": "open", "close": "close"}, inplace=True)
 
         # Ajusta o fuso horário para America/Sao_Paulo e formata a data
         df['data'] = pd.to_datetime(df['from'], unit='s').dt.tz_localize('UTC').dt.tz_convert('America/Sao_Paulo').dt.strftime('%Y-%m-%d %H:%M')
 
-    # Calcula direção e força dos candles
+    # Calcula direção e corpo dos candles
     df['direcao'] = np.where(df['close'] > df['open'], 'call', 'put')
     df['corpo'] = abs(df['close'] - df['open'])
     df['tamanho_relativo'] = df['corpo'] / df['corpo'].rolling(20).mean()
 
-    # Mantem no dataframe apenas as colunas 'data', 'direcao', 'corpo', 'tamanho_relativo'
+    # Mantém apenas as colunas necessárias
     df = df[['data', 'direcao', 'corpo', 'tamanho_relativo']]
 
-
-    print("Até aqui meu Dataframe: ", df)
+    print("Até aqui meu DataFrame: ", df)
 
     # Identifica padrões de cores
     padroes = defaultdict(lambda: {'call': 0, 'put': 0})
-    
+
     for i in range(len(df) - candles_padrao - 1):
         # Cria chave do padrão (ex: call-call-put)
-        padrao = tuple(df['direcao'].iloc[i:i+candles_padrao])
-        movimento_seguinte = df['direcao'].iloc[i+candles_padrao]
-        padroes[padrao][movimento_seguinte] += 1
+        padrao = tuple(df['direcao'].iloc[i:i + candles_padrao])
+        movimento_seguinte = df['direcao'].iloc[i + candles_padrao]
 
-        print("Padrão: ", padrao)
-        print("Movimento Seguinte: ", movimento_seguinte)
-        print("Padrões: ", padroes)
+        # Verifica se o candle seguinte é válido
+        if df['corpo'].iloc[i + candles_padrao] >= tamanho_minimo_corpo:
+            padroes[padrao][movimento_seguinte] += 1
 
     # Calcula probabilidades
     ultimo_padrao = tuple(df['direcao'].iloc[-candles_padrao:])
 
-    print("Ultimo padrão: ", ultimo_padrao)
-    
+    print("Último padrão: ", ultimo_padrao)
+
     if ultimo_padrao not in padroes:
         print("Padrão não encontrado no histórico")
-        return None  # Padrão não encontrado no histórico
+        return None  
 
     total_ocorrencias = sum(padroes[ultimo_padrao].values())
-    if total_ocorrencias < 15:  # Mínimo de ocorrências para considerar válido
-        print("Teve mais de 15 ocorrências")
-        return None
+    if total_ocorrencias < 15:  
+        print("Menos de 15 ocorrências no histórico")
+        return None  
 
     prob_call = (padroes[ultimo_padrao]['call'] / total_ocorrencias) * 100
     prob_put = (padroes[ultimo_padrao]['put'] / total_ocorrencias) * 100
 
     print(f"Probabilidade CALL: {prob_call:.2f}% | Probabilidade PUT: {prob_put:.2f}%")
 
-    # Filtros adicionais
+    # Filtros adicionais (últimos candles)
     ultimo_candle = df.iloc[-1]
     penultimo_candle = df.iloc[-2]
 
-    print(f"Ultimo candle: {ultimo_candle}")
-    print(f"Penultimo candle: {penultimo_candle}")
-    
-    # Estratégia de decisão
+    print(f"Último candle: {ultimo_candle}")
+    print(f"Penúltimo candle: {penultimo_candle}")
+
+    # Verifica se o último candle atende aos critérios de tamanho antes de entrar na operação
+    if ultimo_candle['corpo'] < tamanho_minimo_corpo:
+        print("Último candle muito pequeno, ignorando entrada.")
+        return None
+
     if prob_call >= confiabilidade:
         return 'call'
     
@@ -455,7 +459,7 @@ if __name__ == '__main__':
         input('\n\n Aperte enter para sair')
         sys.exit()
     
-    res_op = estrategia_probabilistica(API, 'EURUSD-OTC', 1)
+    res_op = estrategia_probabilistica(API, 'EURUSD', 1)
     print(f"Direção da Operação: {res_op}")
 
     # print(time())

@@ -14,6 +14,44 @@ import numpy as np
 
 load_dotenv()
 
+class DataFrameIterator:
+    def __init__(self, df, num_separados=3):
+        """
+        Inicializa o iterador com um DataFrame e um índice de controle.
+        :param df: DataFrame com os dados.
+        :param num_separados: Número de registros a serem separados em cada chamada.
+        """
+        self.df = df.reset_index(drop=True)  # Garante índices contínuos
+        self.index = 500  # Começa do 501º registro
+        self.num_separados = num_separados + 1 # Define quantos registros serão separados e tem +1 pela lógica do margingale
+
+    def next_batch(self):
+        """
+        Retorna os 500 primeiros registros, adicionando um novo a cada chamada, 
+        e separa os próximos `num_separados` registros.
+        """
+        # Se o índice já está no final do DataFrame, retorna os últimos 500 sem separados
+        if self.index >= len(self.df):
+            return self.df.iloc[-500:], []
+
+        # Define os 500 registros principais (deslocados a cada chamada)
+        registros_principais = self.df.iloc[self.index - 500:self.index]
+
+        # Define os registros separados (até `num_separados`)
+        proximo_indice = min(self.index + self.num_separados, len(self.df))
+        registros_separados = self.df.iloc[self.index:proximo_indice]
+
+        # Avança o índice para a próxima chamada
+        self.index += 1
+
+        return registros_principais, registros_separados
+
+    def reset(self):
+        """
+        Reseta o iterador para começar novamente dos 500 primeiros registros.
+        """
+        self.index = 500
+        print("Iterador reiniciado para os primeiros 500 registros.")
 
 class ListaControladora:
     def __init__(self, lista_maior):
@@ -91,6 +129,91 @@ class IteradorPosicoes:
     def reset(self):
         self.i = 0
         self.j = 0
+
+class BackTestMoney:
+    def __init__(self, qtd_ciclos, fator, banca_value):
+        """
+        Inicializa a classe com uma lista de elementos e um índice de controle.
+        :param elementos: Lista de elementos a serem percorridos ciclicamente.
+        """
+
+        self.index = 0  # Começa do primeiro elemento
+        self.qtd_ciclos = qtd_ciclos
+        self.fator = fator
+        self.banca_value = banca_value
+        self.elementos = self.calibra_entrada_backtest()
+        self.lucro_total = 0
+        self.quebra_bancas = 0
+
+    def proximo(self):
+        """
+        Retorna o próximo elemento da lista. Quando chega ao final, retorna ao primeiro.
+        """
+        elemento = self.elementos[self.index]
+        self.index = (self.index + 1) % len(self.elementos)  # Loop cíclico
+        return elemento
+
+    def reset(self):
+        """
+        Reinicia a lista para começar novamente do primeiro elemento.
+        """
+        self.index = 0
+        print("Iteração reiniciada para o primeiro elemento.")
+
+
+    def entrada_min(self):
+        # Recupera o valor de ciclos e fator_martingale
+        initial = 1
+        total_banca = initial
+        self.qtd_ciclos = int(self.qtd_ciclos)
+        for i in range(1,self.qtd_ciclos):
+            total_banca += round(initial * self.fator,2)
+            initial = round(initial * self.fator,2)
+
+        return round(total_banca, 2)
+
+    def ajuste_entrada_backtest(self):
+
+        # Calcular a soma da série geométrica
+        soma_serie = sum([self.fator ** i for i in range(self.qtd_ciclos)])
+        
+        # Calcular a primeira parte da banca
+        primeira_parte = round(self.banca_value / soma_serie, 2)
+        
+        # Inicializar a lista de partes da banca
+        partes_banca = [primeira_parte]
+        
+        # Calcular as partes restantes da banca
+        for i in range(1, self.qtd_ciclos):
+            partes_banca.append(round(partes_banca[-1] * self.fator, 2))
+        
+        # Verificar se a soma das partes é igual à banca
+        # Se não for, ajustar a última parte
+        soma_partes = sum(partes_banca)
+        if soma_partes != self.banca_value:
+            partes_banca[-1] += round(self.banca_value - soma_partes, 2)
+
+        print(f"Partes da banca: {partes_banca}")
+        # Retornar a lista de partes da banca
+        return partes_banca
+
+    def calibra_entrada_backtest(self):
+
+        # Executa a função banca e salva na variável "banca_value"
+        print(f"Banca: {self.banca_value}")
+
+        ciclos = self.ajuste_entrada_backtest()
+
+        min_ent = self.entrada_min()
+
+        if int(ciclos[0]) < 1:
+
+            return f"Para que seja possivel realizar {ciclos} ciclos é necessario ter no minimo banca de U$ {min_ent}"
+        
+        # lista_fim = agrupar_pares(ciclos)
+
+
+        return ciclos
 
 def myround(value):
     return float("{:.2f}".format(round(value * 100) / 100))

@@ -12,3 +12,17 @@ modedas_major = ['EURUSD-OTC', 'EURGBP-OTC', 'USDCHF-OTC', 'GBPUSD-OTC', 'GBPJPY
 # Instalação da IQOPTION API
 
 pip install -U https://github.com/iqoptionapi/iqoptionapi/archive/refs/heads/master.zip
+
+RESULTADO BACKTEST:
+
+coins: ['EURUSD-op']
+strateg: probabilistica
+timeframe: 1
+metodo: current
+tempo: 6h
+
+coins: ['EURUSD-op']
+strateg: probabilistica
+timeframe: 1
+metodo: personal
+tempo: 18/03/2025 08:00 - 18/03/2025 08:05
