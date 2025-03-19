@@ -8,7 +8,7 @@ from iqoptionapi.stable_api import IQ_Option
 from dotenv import load_dotenv
 import pandas as pd
 from time import sleep, time
-from handler import alter_config, get_one_data
+from backend.handler import alter_config, get_one_data
 import sys
 import numpy as np
 
@@ -161,6 +161,43 @@ class BackTestMoney:
         print("Iteração reiniciada para o primeiro elemento.")
 
 
+    def processa_game(self, resultado):
+        entrada = self.proximo()
+        if self.banca_value < entrada:
+            self.quebra_bancas += 1
+            print("Quebrou a banca")
+            print("*" * 15)
+            # Exibe valores arredondados na tela
+            print(f"Banca: {self.banca_value}")
+            print(f"Lucro: {self.lucro_total}")
+            print(f"Quebra de bancas: {self.quebra_bancas}")
+            print()
+            return
+        
+        print(f"Valor da entrada: {entrada}")
+        print(f"Resultado: {resultado}")
+        if resultado == "win":
+            print(f"Resutado da viória: {round(entrada*0.8, 2)}")
+            self.lucro_total += round(entrada*0.8, 2)
+            self.banca_value += round(entrada*0.8, 2)
+            # Resetar o Indice de valores e recalibrar a banca
+            self.reset()
+            self.elementos = self.calibra_entrada_backtest()
+
+        elif resultado == "loss":
+            self.lucro_total -= entrada
+            self.banca_value -= entrada
+        # Confirma o arredondamento dos valores
+        self.lucro_total = round(self.lucro_total, 2)
+        self.banca_value = round(self.banca_value, 2)
+
+        # Exibe valores arredondados na tela
+        print(f"Banca: {self.banca_value}")
+        print(f"Lucro: {self.lucro_total}")
+        print(f"Quebra de bancas: {self.quebra_bancas}")
+        print()
+
+
     def entrada_min(self):
         # Recupera o valor de ciclos e fator_martingale
         initial = 1
@@ -193,8 +230,11 @@ class BackTestMoney:
         if soma_partes != self.banca_value:
             partes_banca[-1] += round(self.banca_value - soma_partes, 2)
 
+        # Arredonda todos os itens para apenas duas casas decimais
+        partes_banca = [round(item, 2) for item in partes_banca]
+
         print(f"Partes da banca: {partes_banca}")
-        # Retornar a lista de partes da banca
+
         return partes_banca
 
     def calibra_entrada_backtest(self):

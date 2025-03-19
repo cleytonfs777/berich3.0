@@ -4,7 +4,7 @@ import math
 import sys
 import time
 import pandas as pd
-from utils import DataFrameIterator
+from utils import BackTestMoney, DataFrameIterator
 from handler import get_one_data
 from strategies import estrategia_probabilistica
 from dotenv import load_dotenv
@@ -21,8 +21,6 @@ class ManagerBacktest:
         self.estrategia = estrategia
         self.metodo = metodo
         self.tempo = tempo
-        self.lucro_total = 0
-        self.quebra_bancas = 0
         self.API = self.conexao_IqOption()
 
     def conexao_IqOption(self):
@@ -194,25 +192,61 @@ class ManagerBacktest:
         # Iterador de frames
         divisor_df = DataFrameIterator(df, num_separados)
 
-        for i in range(2):
+        num_rep = df.shape[0] - 500 - 1  # Número de repetições do loop FOR (menos 500 candles de buffer) (menos 1 para não pegar o último candle)
+        print(f"Numero de repetições do FOR: {num_rep}")
+
+        # Informações Financeiras simuladas inseridas ao backtest
+        banca_simulada = 95
+        ft_gale = 2.5
+        cils = 5
+
+        simula_back = BackTestMoney(cils, ft_gale, banca_simulada)
+
+        for i in range(num_rep):
 
             registros, separados = divisor_df.next_batch()
-            print(f"{i}ª Chamada:")
+            print(f"{i+1}ª Chamada:")
             print(registros.tail())  # Mostra os primeiros registros
             print("Registros separados:\n", separados)
             direcao_candles = self.analisar_candles(separados)
             print("Analise de direção dos separados: ", direcao_candles)
 
-        # if self.estrategia == 'estrategia_probabilistica':
-        #     result = estrategia_probabilistica(self.API, self.moeda, self.timeframe_bk, df)
-            
+            if self.estrategia == 'estrategia_probabilistica':
+                result = estrategia_probabilistica(self.API, self.moeda, self.timeframe_bk, registros)
+
+            # Compara o resultado aos candles separados
+            for idx in direcao_candles:
+                if not result:
+                    print("Operação não realizada. Indecisão...")
+                    continue
+                if not idx:
+                    print("Operação Empatada. Proxima interação")
+                    continue
+
+                if idx == result:
+                    simula_back.processa_game('win')
+                    # Se o resultado for win ele não deve verificar proximo candle
+                    break
+                else:
+                    simula_back.processa_game('loss')
+
+        resultado = f"""
+        📊 **RESULTADO DAS OPERAÇÕES PARA {self.moeda} NO TIMEFRAME {self.timeframe_bk}** 📉
+
+        💰 **BANCA FINAL:** U$ {simula_back.banca_value}
+        📈 **LUCRO TOTAL:** U$ {simula_back.lucro_total}
+        🔥 **QUEBRA DE BANCAS:** {simula_back.quebra_bancas} bancas quebradas
+        """
+
+        print(resultado)
+
 
         
 
 
 
 
-def backtest_for_telegram(modedas, timeframe_bk, estrategia, metodo, tempo): #metodo: personal -> 18/03/2025 08:00 - 18/03/2025 08:05 ou current -> 6h
+def backtest_for_telegram(modedas, timeframe_bk, estrategia, metodo, tempo): #metodo: personal -> 18/03/2025 08:00 - 18/03/2025 16:05 ou current -> 6h
     retultado = f"""
     moedas: {modedas}
     timeframe_bk: {timeframe_bk}
@@ -228,12 +262,5 @@ def backtest_for_telegram(modedas, timeframe_bk, estrategia, metodo, tempo): #me
 
 
 if __name__ == '__main__':
-    backtest1 = ManagerBacktest('EURUSD', 1, 'estrategia_probabilistica', 'personal', '18/03/2025 17:20 - 18/03/2025 17:35')
+    backtest1 = ManagerBacktest('EURUSD', 1, 'estrategia_probabilistica', 'personal', '18/03/2025 08:20 - 18/03/2025 17:30')
     backtest1.backtest_main()
-
-
-    # print(f"Timestamp: {time()}")
-    # print(datetime.fromtimestamp(time()))
-    # data = '2021-09-01 00:00:00'
-    # # tranformar para timestamp
-    # print(datetime.strptime(data, '%Y-%m-%d %H:%M:%S').timestamp())

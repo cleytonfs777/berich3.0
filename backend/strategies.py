@@ -347,8 +347,8 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
     # Verifica se há tempo inicial
     tempo_inicial = tempo_inicial if tempo_inicial else time()
 
-    # Coleta dados históricos
-    if not df:
+    # Coleta dados históricos se `df` não for passado ou estiver vazio
+    if df is None or df.empty:
         velas = api_conn.get_candles(par, timeframe * 60, periodo_analise, tempo_inicial)
         df = pd.DataFrame(velas)
         df.rename(columns={"max": "high", "min": "low", "open": "open", "close": "close"}, inplace=True)
@@ -356,13 +356,21 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
         # Ajusta o fuso horário para America/Sao_Paulo e formata a data
         df['data'] = pd.to_datetime(df['from'], unit='s').dt.tz_localize('UTC').dt.tz_convert('America/Sao_Paulo').dt.strftime('%Y-%m-%d %H:%M')
 
+    # Se ainda estiver vazio, retorna None
+    if df.empty:
+        print("Nenhum dado disponível para análise.")
+        return None  
+
+    # Criando uma cópia antes de modificar colunas para evitar o SettingWithCopyWarning
+    df = df.copy()
+
     # Calcula direção e corpo dos candles
     df['direcao'] = np.where(df['close'] > df['open'], 'call', 'put')
     df['corpo'] = abs(df['close'] - df['open'])
     df['tamanho_relativo'] = df['corpo'] / df['corpo'].rolling(20).mean()
 
-    # Mantém apenas as colunas necessárias
-    df = df[['data', 'direcao', 'corpo', 'tamanho_relativo']]
+    # Mantém apenas as colunas necessárias e evita erro de view do Pandas
+    df = df[['data', 'direcao', 'corpo', 'tamanho_relativo']].copy()
 
     print("Até aqui meu DataFrame: ", df)
 
@@ -416,6 +424,7 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
         return 'put'
     
     return None
+
 
 def estrategia_teste(api_conn, par, timeframe):
     return "call"
