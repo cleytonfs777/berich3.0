@@ -93,6 +93,9 @@ def ligar_desligar():
     # Escrevendo no arquivo JSON
     alter_config('status', sinal)
 
+    # Alterar o valor de changed para true
+    alter_config('changed', True)
+
     if sinal == "on":
         return "✅ Robô ligado com sucesso!! ✅"
     else:

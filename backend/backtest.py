@@ -100,7 +100,7 @@ class ManagerBacktest:
             # Calcula o horário do primeiro candle
             primeiro_candle = hora_atual - timedelta(seconds=(num_candles - 1) * timeframe_segundos)
 
-            print(f"Dados puros: Primeiro candle: {primeiro_candle}, Último candle: {hora_atual}, Número de candles: {num_candles}")
+            # print(f"Dados puros: Primeiro candle: {primeiro_candle}, Último candle: {hora_atual}, Número de candles: {num_candles}")
 
             # Formata os horários para exibição
             primeiro_candle_timestmap = primeiro_candle.timestamp()
@@ -108,7 +108,7 @@ class ManagerBacktest:
             ultimo_candle_timestmap = hora_atual.timestamp()
             ultimo_candle_str = hora_atual.strftime("%d/%m/%Y %H:%M:%S")
 
-            print(f"Primeiro candle: {primeiro_candle_str}, Último candle: {ultimo_candle_str}, Número de candles: {num_candles}")
+            # print(f"Primeiro candle: {primeiro_candle_str}, Último candle: {ultimo_candle_str}, Número de candles: {num_candles}")
 
             # Retorna os valores calculados
             return [primeiro_candle_timestmap, ultimo_candle_timestmap, num_candles]
@@ -137,7 +137,7 @@ class ManagerBacktest:
             timestamp_final = int(dt_final.timestamp())
 
             # Faz um print nos dados no formato de data/hora para conferencia
-            print(f"Primeiro candle: {dt_inicial}, Último candle: {dt_final}, Número de candles: {num_candles}")
+            # print(f"Primeiro candle: {dt_inicial}, Último candle: {dt_final}, Número de candles: {num_candles}")
 
             # Retorna os resultados
             return [timestamp_inicial, timestamp_final, num_candles]
@@ -149,12 +149,12 @@ class ManagerBacktest:
         """
 
         pri_candle, ulti_candle, quantos = self.calcular_range_candles()
-        print(f"Primeiro candle: {pri_candle}, Último candle: {ulti_candle}, Número de candles: {quantos}")
+        # print(f"Primeiro candle: {pri_candle}, Último candle: {ulti_candle}, Número de candles: {quantos}")
 
         # Adiciona um buffer para garantir que está pegando a quantidade correta de candles
         total_candles = quantos + 500
 
-        print(f"Variaveis de Entrada: moeda: {self.moeda}, timeframe: {self.timeframe_bk}, total_candles: {total_candles}, ulti_candle: {ulti_candle}")
+        # print(f"Variaveis de Entrada: moeda: {self.moeda}, timeframe: {self.timeframe_bk}, total_candles: {total_candles}, ulti_candle: {ulti_candle}")
 
         all_candles_needed = self.API.get_candles(
             self.moeda, self.timeframe_bk * 60, total_candles, ulti_candle
@@ -193,7 +193,7 @@ class ManagerBacktest:
         divisor_df = DataFrameIterator(df, num_separados)
 
         num_rep = df.shape[0] - 500 - 1  # Número de repetições do loop FOR (menos 500 candles de buffer) (menos 1 para não pegar o último candle)
-        print(f"Numero de repetições do FOR: {num_rep}")
+        # print(f"Numero de repetições do FOR: {num_rep}")
 
         # Informações Financeiras simuladas inseridas ao backtest
         banca_simulada = 95
@@ -205,11 +205,11 @@ class ManagerBacktest:
         for i in range(num_rep):
 
             registros, separados = divisor_df.next_batch()
-            print(f"{i+1}ª Chamada:")
-            print(registros.tail())  # Mostra os primeiros registros
-            print("Registros separados:\n", separados)
+            # print(f"{i+1}ª Chamada:")
+            # print(registros.tail())  # Mostra os primeiros registros
+            # print("Registros separados:\n", separados)
             direcao_candles = self.analisar_candles(separados)
-            print("Analise de direção dos separados: ", direcao_candles)
+            # print("Analise de direção dos separados: ", direcao_candles)
 
             if self.estrategia == 'estrategia_probabilistica':
                 result = estrategia_probabilistica(self.API, self.moeda, self.timeframe_bk, registros)
@@ -262,5 +262,5 @@ def backtest_for_telegram(modedas, timeframe_bk, estrategia, metodo, tempo): #me
 
 
 if __name__ == '__main__':
-    backtest1 = ManagerBacktest('EURUSD', 1, 'estrategia_probabilistica', 'personal', '18/03/2025 08:20 - 18/03/2025 17:30')
+    backtest1 = ManagerBacktest('EURUSD', 1, 'estrategia_probabilistica', 'personal', '24/03/2025 08:20 - 24/03/2025 10:30')
     backtest1.backtest_main()

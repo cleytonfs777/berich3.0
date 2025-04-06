@@ -8,7 +8,7 @@ from handler import *
 # Adiciona o diretório raiz ao sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from iqoptionapi.stable_api import IQ_Option
-from strategies import estrategia_fibonacci, estrategia_medias_rsi, estrategia_price_action, estrategia_probabilistica, estrategia_smc, estrategia_teste, operation_start
+from strategies import estrategia_bollinger_rsi, estrategia_fibonacci, estrategia_media_rsi, estrategia_price_action, estrategia_probabilistica, estrategia_sequencia_cores_otimizada, estrategia_smc, estrategia_teste, operation_start
 from utils import *
 from colorama import Fore, init
 from messeger import enviar_mensagem_telegram
@@ -101,12 +101,13 @@ def mainbot():
 
     # Relaciona todas as estratégias criadas
     estrategias = {
-        "medias_rsi": estrategia_medias_rsi,
+        "bbands_rsi": estrategia_bollinger_rsi,
+        "media_rsi": estrategia_media_rsi,
         "price_action": estrategia_price_action,
         "fibonacci": estrategia_fibonacci,
         "probabilistica": estrategia_probabilistica,
         "teste": estrategia_teste,
-        "smc": estrategia_smc,
+        "sequencia_cores_otimizada": estrategia_sequencia_cores_otimizada,
     }
 
     INITIAL_LOOP = True
@@ -162,9 +163,14 @@ def mainbot():
 
             if configs['estrategia_principal'] in estrategias:
                 estrategia = estrategias[configs['estrategia_principal']]
+
+                print(f'\rRastreando oportunidades...para Estratégia: {configs["estrategia_principal"]}   {datetime.now().strftime("%H:%M:%S")}', end='')
                 
                 if permited_time("general_permissions"):
+                    print(f"Tempo correto para analise...")
                     direction = estrategia(API, configs['pares_favoritos'][0], configs['timeframe'])
+            else:
+                print(f'{Fore.RED}Estratégia {configs["estrategia_principal"]} não encontrada...{Fore.RESET}')
 
 
             if direction:

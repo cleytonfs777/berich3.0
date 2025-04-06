@@ -89,7 +89,7 @@ pares_otc = [
     'EURNZD-OTC', 'AUDCHF-OTC', 'AUDNZD-OTC', 'EURCHF-OTC', 'GBPNZD-OTC',
     'CADJPY-OTC', 'NZDCAD-OTC', 'NZDJPY-OTC', 'USDJPY-OTC', 'AUDCAD-OTC',
     'NZDUSD-OTC', 'USDNOK-OTC', 'USDSGD-OTC', 'EURJPY-OTC', 'USDHKD-OTC',
-    'USDZAR-OTC', 'USDMXN-OTC', 'USDRUB-OTC', 'USDCNH-OTC'
+    'USDZAR-OTC', 'USDMXN-OTC', 'USDRUB-OTC', 'USDCNH-OTC', 'XAUUSD-OTC'
 ]
 
 pares_normais = [
@@ -439,9 +439,9 @@ async def callback(clinet, callback_query: CallbackQuery):
                 ],
                 [
                     InlineKeyboardButton(
-                        "Probabilística", callback_data="probabilistica_est"),
+                        "BBolinger+RSI", callback_data="bbands_rsi_est"),
                     InlineKeyboardButton(
-                        "Smart Money", callback_data="smc_est"),
+                        "Sequencia Cores", callback_data="sequencia_cores_otimizada_est"),
                 ],
 
             ])

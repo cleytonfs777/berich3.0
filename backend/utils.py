@@ -615,6 +615,80 @@ def calibrar_entrada(API=None)-> str:
 
         return "Dados ajustados com sucesso!!"
 
+def melhor_sequencia_velas(api_conn, par, timeframe, max_gales=1, velas_analise=500, max_seq_testada=8):
+    """
+    Calcula a melhor quantidade de velas consecutivas (cores iguais) para entradas,
+    considerando a quantidade máxima de gales (Martingale).
+    """
+
+    # Obter dados
+    timeframe_norm = normalize_timeframe(timeframe)
+    velas = api_conn.get_candles(par, timeframe_norm * 60, velas_analise, time())
+
+    df = pd.DataFrame(velas)
+
+    # Determina cores das velas
+    df['cor'] = df.apply(lambda row: 'verde' if row['close'] >= row['open'] else 'vermelho', axis=1)
+
+    melhores_resultados = {}
+
+    # Testa diferentes quantidades de velas consecutivas
+    for seq in range(2, max_seq_testada + 1):
+        entradas = 0
+        wins = 0
+        losses = 0
+
+        i = seq
+        while i < len(df) - 1:
+            # Identifica sequência de cores iguais
+            sequencia_atual = df['cor'].iloc[i-seq:i]
+            if len(set(sequencia_atual)) == 1:  # todas as cores iguais
+                entradas += 1
+                direcao_entrada = 'put' if sequencia_atual.iloc[0] == 'verde' else 'call'
+
+                venceu = False
+
+                # Verifica resultado com gales
+                for gale in range(max_gales + 1):
+                    idx = i + gale
+                    if idx >= len(df):
+                        break
+
+                    proxima_cor = df['cor'].iloc[idx]
+
+                    if (direcao_entrada == 'call' and proxima_cor == 'verde') or \
+                       (direcao_entrada == 'put' and proxima_cor == 'vermelho'):
+                        venceu = True
+                        break
+
+                if venceu:
+                    wins += 1
+                else:
+                    losses += 1
+
+                i += max_gales  # pula candles usados em gale
+            i += 1
+
+        if entradas > 0:
+            taxa_acerto = (wins / entradas) * 100
+        else:
+            taxa_acerto = 0
+
+        melhores_resultados[seq] = {
+            'entradas': entradas,
+            'wins': wins,
+            'losses': losses,
+            'assertividade (%)': round(taxa_acerto, 2)
+        }
+
+    # Determina melhor sequência com maior assertividade
+    melhor_seq = max(melhores_resultados.items(), key=lambda x: (x[1]['assertividade (%)'], x[1]['entradas']))
+
+    print(f"Melhor sequência: {melhor_seq[0]} velas consecutivas")
+    print(f"Resultados: {melhor_seq[1]}")
+
+    return melhor_seq, melhores_resultados
+
 ###################################################################### STRATEGIES ######################################################################
 
 if __name__ == '__main__':

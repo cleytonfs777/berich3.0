@@ -5,12 +5,13 @@ import pandas as pd
 from dotenv import load_dotenv
 from handler import *
 from iqoptionapi.stable_api import IQ_Option
-from utils import IteradorPosicoes, check_colors, normalize_timeframe, calibrar_entrada, myround, ListaControladora
+from utils import IteradorPosicoes, check_colors, melhor_sequencia_velas, normalize_timeframe, calibrar_entrada, myround, ListaControladora
 from datetime import datetime
 from messeger import enviar_mensagem_telegram
 from threading import Thread
 import numpy as np
 from collections import defaultdict
+import pandas_ta as ta
 
 
 # Nesse módulo serão descritas as principais estratégias a ser utilizadas em opções binárias
@@ -247,38 +248,80 @@ def detectar_bos(df):
 
 # ESTRATÉGIAS A SEREM IMPLEMNTADAS
 
-def estrategia_medias_rsi(api_conn, par, timeframe, media_curta=9, media_longa=21, rsi_periodo=14):
+def estrategia_bollinger_rsi(api_conn, par, timeframe, periodo_bollinger=20, desvio=2, periodo_rsi=7):
     """
-    Estratégia de Cruzamento de Médias Móveis + RSI.
+    Estratégia utilizando Bandas de Bollinger e RSI.
     Retorna um sinal ('call', 'put' ou None).
     """
-    print(f"Analisando {par} no timeframe {timeframe}...")
+    print(f"Analisando {par} no timeframe {timeframe}... com Bollinger Bands e RSI")
 
-    # Pega os dados das velas
-    timeframe = normalize_timeframe(timeframe)
-    velas = api_conn.get_candles(par, timeframe * 60, 25, time())
-    
+    # Normaliza e busca as velas
+    timeframe_norm = normalize_timeframe(timeframe)
+    velas = api_conn.get_candles(par, timeframe_norm * 60, 100, time())
+
+    # Cria DataFrame e ajusta colunas
     df = pd.DataFrame(velas)
     df.rename(columns={"max": "high", "min": "low"}, inplace=True)
 
-    # Calcula as médias móveis
-    df['media_curta'] = df['close'].rolling(window=media_curta).mean()
-    df['media_longa'] = df['close'].rolling(window=media_longa).mean()
+    # Calcula Bandas de Bollinger
+    bb = ta.bbands(df['close'], length=periodo_bollinger, std=desvio)
+    df = df.join(bb)
 
     # Calcula RSI
-    df['RSI'] = calcular_rsi(df['close'], rsi_periodo)
+    df['RSI'] = ta.rsi(df['close'], length=periodo_rsi)
 
-    # Identifica cruzamento das médias e confirmação do RSI
+    # Exibe valores atuais
+    preco_atual = df.iloc[-1]['close']
+    banda_sup = df.iloc[-1]['BBU_20_2.0']
+    banda_inf = df.iloc[-1]['BBL_20_2.0']
+    rsi_atual = df.iloc[-1]['RSI']
+
+    print(f"Preço atual: {preco_atual}, Bollinger Superior: {banda_sup}, Bollinger Inferior: {banda_inf}, RSI: {rsi_atual}")
+
+    # Verifica entradas para CALL
+    if preco_atual < banda_inf and rsi_atual <= 30:
+        return "call"
+
+    # Verifica entradas para PUT
+    elif preco_atual > banda_sup and rsi_atual >= 70:
+        return "put"
+
+    return None
+
+def estrategia_media_rsi(api_conn, par, timeframe, media_curta=9, media_longa=21, rsi_periodo=14):
+    """
+    Estratégia de Cruzamento de Médias Móveis (pandas-ta) + RSI.
+    Retorna um sinal ('call', 'put' ou None).
+    """
+    print(f"Analisando {par} no timeframe {timeframe}... com pandas-ta")
+
+    # Pega os dados das velas
+    timeframe = normalize_timeframe(timeframe)
+    velas = api_conn.get_candles(par, timeframe * 60, 100, time())  # pegando mais velas pra cálculo
+
+    df = pd.DataFrame(velas)
+    df.rename(columns={"max": "high", "min": "low"}, inplace=True)
+
+    # Calcula as médias móveis (EMA)
+    df['media_curta'] = df.ta.ema(length=media_curta)
+    df['media_longa'] = df.ta.ema(length=media_longa)
+
+    # Calcula o RSI
+    # df['RSI'] = df.ta.rsi(length=rsi_periodo)
+
+    # Exibe o preço atual e indicadores
+    print(f"Preço atual: {df.iloc[-1]['close']}, Média Curta: {df.iloc[-1]['media_curta']}, Média Longa: {df.iloc[-1]['media_longa']}")
+
+    # Verifica se há cruzamento de médias e confirmação pelo RSI
     if df.iloc[-2]['media_curta'] < df.iloc[-2]['media_longa'] and df.iloc[-1]['media_curta'] > df.iloc[-1]['media_longa']:
-        if df.iloc[-1]['RSI'] < 70:  # Confirma que não está sobrecomprado
-            return "call"
+        # if df.iloc[-1]['RSI'] < 70:
+        return "call"
 
     elif df.iloc[-2]['media_curta'] > df.iloc[-2]['media_longa'] and df.iloc[-1]['media_curta'] < df.iloc[-1]['media_longa']:
-        if df.iloc[-1]['RSI'] > 30:  # Confirma que não está sobrevendido
-            return "put"
+        # if df.iloc[-1]['RSI'] > 30:
+        return "put"
 
-    return None  # Sem sinal de entrada
-
+    return None
 
 # Estratégia de Price Action com Padrões de Velas + Suporte e Resistência
 def estrategia_price_action(api_conn, par, timeframe):
@@ -372,7 +415,7 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
     # Mantém apenas as colunas necessárias e evita erro de view do Pandas
     df = df[['data', 'direcao', 'corpo', 'tamanho_relativo']].copy()
 
-    print("Até aqui meu DataFrame: ", df)
+    # print("Até aqui meu DataFrame: ", df)
 
     # Identifica padrões de cores
     padroes = defaultdict(lambda: {'call': 0, 'put': 0})
@@ -425,7 +468,6 @@ def estrategia_probabilistica(api_conn: IQ_Option, par, timeframe, df=None, conf
     
     return None
 
-
 def estrategia_teste(api_conn, par, timeframe):
     return "call"
 
@@ -454,6 +496,45 @@ def estrategia_smc(api_conn, par, timeframe):
 
     return None  # Nenhuma condição atendida
 
+def estrategia_sequencia_cores_otimizada(api_conn, par, timeframe, max_gales=4):
+    """
+    Estratégia de sequência de cores com número ótimo de velas consecutivas definido automaticamente.
+    Retorna sinal ('call', 'put' ou None).
+    """
+    max_gales = get_one_data("qtd_martingale")
+
+    # Descobrindo automaticamente a melhor sequência
+    melhor_seq, detalhes = melhor_sequencia_velas(api_conn, par, timeframe, max_gales=max_gales)
+
+    velas_consecutivas_otimas = melhor_seq[0]
+
+    print(f"\nUtilizando {velas_consecutivas_otimas} velas consecutivas (sequência otimizada automaticamente).")
+
+    # Obtem as últimas velas com base no resultado da melhor sequência
+    timeframe_norm = normalize_timeframe(timeframe)
+    velas = api_conn.get_candles(par, timeframe_norm * 60, velas_consecutivas_otimas + 1, time())
+
+    df = pd.DataFrame(velas)
+
+    # Determina cores das velas
+    df['cor'] = df.apply(lambda row: 'verde' if row['close'] >= row['open'] else 'vermelho', axis=1)
+
+    # Analisa as cores das últimas X velas
+    ultimas_cores = df['cor'].iloc[-velas_consecutivas_otimas:].tolist()
+
+    print(f"Últimas cores das velas analisadas: {ultimas_cores}")
+
+    # Verifica a sequência das cores para determinar o sinal
+    if all(cor == 'verde' for cor in ultimas_cores):
+        print("Identificada sequência ótima de velas verdes consecutivas. Sinal: PUT")
+        return "put"
+
+    elif all(cor == 'vermelho' for cor in ultimas_cores):
+        print("Identificada sequência ótima de velas vermelhas consecutivas. Sinal: CALL")
+        return "call"
+
+    print("Nenhuma sequência ótima identificada no momento.")
+    return None
 
 if __name__ == '__main__':
     API = IQ_Option(os.getenv('EMAIL_IQPTION'),os.getenv('PASSWORD_IQPTION'))
@@ -468,8 +549,8 @@ if __name__ == '__main__':
         input('\n\n Aperte enter para sair')
         sys.exit()
     
-    res_op = estrategia_probabilistica(API, 'EURUSD', 1)
-    print(f"Direção da Operação: {res_op}")
+    # res_op = estrategia_probabilistica(API, 'EURUSD', 1)
+    # print(f"Direção da Operação: {res_op}")
 
     # print(time())
 
@@ -478,3 +559,7 @@ if __name__ == '__main__':
     # data = '2021-09-01 00:00:00'
     # # tranformar para timestamp
     # print(datetime.strptime(data, '%Y-%m-%d %H:%M:%S').timestamp())
+    print(paridades('digital', API))
+
+
+    entradas = ['EURUSD-OTC', 'EURGBP-OTC', 'USDCHF-OTC', 'GBPUSD-OTC', 'GBPJPY-OTC', 'USDZAR-OTC', 'USDSGD-OTC', 'USDHKD-OTC', 'USDMXN-OTC-L', 'XAUUSD-OTC', 'GOOGLE-OTC', 'AMAZON-OTC', 'TESLA-OTC', 'FB-OTC', 'APPLE-OTC', 'ETHUSD-OTC', 'SP500-OTC', 'USNDAQ100-OTC', 'US30-OTC', 'SOLUSD-OTC', 'SP35-OTC', 'FR40-OTC', 'GER30-OTC', 'UK100-OTC', 'AUS200-OTC', 'HK33-OTC', 'JP225-OTC', 'US30/JP225-OTC', 'US100/JP225-OTC', 'US500/JP225-OTC', 'AMZN/ALIBABA-OTC', 'AMZN/EBAY-OTC', 'NVDA/AMD-OTC', 'GOOGLE/MSFT-OTC', 'XAU/XAG-OTC', 'TESLA/FORD-OTC', 'MSFT/AAPL-OTC', 'INTEL/IBM-OTC', 'NFLX/AMZN-OTC', 'TON/USD-OTC', 'GER30/UK100-OTC', 'META/GOOGLE-OTC', 'NOTCOIN-OTC', 'BIDU-OTC', 'INTEL-OTC', 'MSFT-OTC', 'CITI-OTC', 'COKE-OTC', 'JPM-OTC', 'MCDON-OTC', 'MORSTAN-OTC', 'NIKE-OTC', 'XRPUSD-OTC', 'US2000-OTC', 'AIG-OTC', 'GS-OTC', 'AUDUSD-OTC', 'USDCAD-OTC', 'AUDJPY-OTC', 'GBPCAD-OTC', 'GBPCHF-OTC', 'GBPAUD-OTC', 'EURCAD-OTC', 'CHFJPY-OTC', 'CADCHF-OTC', 'EURAUD-OTC', 'USDNOK-OTC', 'EURNZD-OTC', 'USDSEK-OTC', 'USDTRY-OTC', 'SNAP-OTC', 'LTCUSD-OTC', 'EOSUSD-OTC', 'USDPLN-OTC', 'AUDCHF-OTC', 'AUDNZD-OTC', 'EURCHF-OTC', 'GBPNZD-OTC', 'CADJPY-OTC', 'NZDCAD-OTC', 'NZDJPY-OTC', 'ICPUSD-OTC', 'IMXUSD-OTC', 'JUPUSD-OTC', 'BONKUSD-OTC', 'LINKUSD-OTC', 'WIFUSD-OTC', 'PEPEUSD-OTC', 'FLOKIUSD-OTC', 'GALAUSD-OTC', 'BCHUSD-OTC', 'DOTUSD-OTC', 'ATOMUSD-OTC', 'INJUSD-OTC', 'SEIUSD-OTC', 'IOTAUSD-OTC', 'BEAMUSD-OTC', 'DASHUSD-OTC', 'ARBUSD-OTC', 'WLDUSD-OTC', 'ORDIUSD-OTC', 'SATSUSD-OTC', 'PYTHUSD-OTC', 'RONINUSD-OTC', 'TIAUSD-OTC', 'MANAUSD-OTC', 'SANDUSD-OTC', 'GRTUSD-OTC', 'STXUSD-OTC', 'MATICUSD-OTC', 'NEARUSD-OTC', 'EURTHB-OTC', 'USDTHB-OTC', 'JPYTHB-OTC', 'HMSTR-OTC', 'CHFNOK-OTC', 'NOKJPY-OTC', 'NZDCHF-OTC', 'TRUMPUSD-OTC', 'MELANIAUSD-OTC', 'BTCUSD-OTC-op', 'ONDOUSD-OTC', 'DYDXUSD-OTC', 'ONYXCOINUSD-OTC', 'FARTCOINUSD-OTC', 'PENGUUSD-OTC', 'RAYDIUMUSD-OTC', 'SUIUSD-OTC', 'HBARUSD-OTC', 'FETUSD-OTC', 'RENDERUSD-OTC', 'TAOUSD-OTC']
