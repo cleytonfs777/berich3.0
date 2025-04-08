@@ -6,15 +6,15 @@
     "qtd_ciclos": 5.0,
     "valor_por_ciclo": [
         [
-            1.87,
-            4.68
+            2.29,
+            5.72
         ],
         [
-            11.7,
-            29.25
+            14.3,
+            35.75
         ],
         [
-            72.82
+            89.24
         ]
     ],
     "corretora": "iqoption",
@@ -22,21 +22,21 @@
     "porcentagem_stop_win": 3.0,
     "porcentagem_stop_loss": 0.97,
     "pares_favoritos": [
-        "EURUSD-OTC"
+        "EURUSD-op"
     ],
     "timeframe": "1m",
     "estrategia_principal": "sequencia_cores_otimizada",
     "tipo_conta": "PRACTICE",
     "typecoin": "digital",
-    "banca": 120.32,
+    "banca": 147.3,
     "lucprej": 0.0,
     "opaberto": 0,
     "autoscaling": "on",
     "lmt_candles": 4,
     "changed": false,
     "target": "status",
-    "valor_entry": 1.84,
-    "luc_prej": 55.32,
+    "valor_entry": 2.29,
+    "luc_prej": 0,
     "stage_ciclo": [
         0,
         0

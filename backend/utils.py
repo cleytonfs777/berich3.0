@@ -620,7 +620,10 @@ def melhor_sequencia_velas(api_conn, par, timeframe, max_gales=1, velas_analise=
     Calcula a melhor quantidade de velas consecutivas (cores iguais) para entradas,
     considerando a quantidade máxima de gales (Martingale).
     """
-
+   
+    # Remove o texto '-op' caso exista
+    par = par.replace('-op', '')
+ 
     # Obter dados
     timeframe_norm = normalize_timeframe(timeframe)
     velas = api_conn.get_candles(par, timeframe_norm * 60, velas_analise, time())

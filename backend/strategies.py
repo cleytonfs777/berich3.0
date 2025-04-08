@@ -512,7 +512,12 @@ def estrategia_sequencia_cores_otimizada(api_conn, par, timeframe, max_gales=4):
 
     # Obtem as últimas velas com base no resultado da melhor sequência
     timeframe_norm = normalize_timeframe(timeframe)
-    velas = api_conn.get_candles(par, timeframe_norm * 60, velas_consecutivas_otimas + 1, time())
+
+    # Remove o texto "-op" do par e salva em uma variavel par tratado
+    par_tratado = par.replace("-op", "")
+
+
+    velas = api_conn.get_candles(par_tratado, timeframe_norm * 60, velas_consecutivas_otimas + 1, time())
 
     df = pd.DataFrame(velas)
 
